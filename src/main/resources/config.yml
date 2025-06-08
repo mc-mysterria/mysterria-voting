@@ -1,0 +1,42 @@
+msg:
+  voting-message: "<red>Голосуйте за сервер і отримуйте круті нагороди! <yellow>Клікніть тут!"
+  hover-text: "<red>Тиць!"
+  no-permission: "<red>У вас немає дозволу для цієї команди!"
+  only-player: "<red>Цю команду може виконати лише гравець!"
+  invalid-usage: "<red>Використовуйте: /voting [send|reload]"
+  reload-success: "<green>Конфігурацію успішно перезавантажено!"
+menu-name: "<green>Голосування"
+menu-size: 27
+menu-items:
+  test:
+    material: DIAMOND
+    display-name: "<green>Проголосуйте за наш сервер!"
+    slot: 13
+    lore:
+      - '<green>Проголосуй за наш сервер на сайті.'
+      - '<bold>Та отримай нагороду!'
+      - '<red>Тицяй лівою, або правою кнопкою миші'
+      - '<rainbow>Та переходь на сайт!</rainbow>'
+    click-actions:
+      left:
+        run-command:
+          player:
+            - 'give @s stone 64'
+            - 'summon creeper'
+          console:
+            - 'give {target} diamond 64'
+            - 'say TESTING'
+        message:
+          - '<green>Сайт для голосування за нас:'
+          - '<green>example'
+      right:
+        run-command:
+          player:
+            - 'give @s stone 64'
+            - 'summon creeper'
+          console:
+            - 'give {target} diamond 64'
+            - 'say TESTING'
+        message:
+          - '<green>Сайт для голосування за нас:'
+          - '<green>example'

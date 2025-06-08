@@ -1,0 +1,17 @@
+name: OWOVoting
+version: '1.0'
+main: oluni.official.minecraft.oWOVoting.OWOVoting
+api-version: '1.21'
+commands:
+  vote:
+    usage: /<command>
+    permission: owovoting.use
+  voting:
+    usage: /<command> [send|reload]
+permissions:
+  owovoting.vote:
+    default: true
+  owovoting.send:
+    default: op
+  owovoting.reload:
+    default: op
