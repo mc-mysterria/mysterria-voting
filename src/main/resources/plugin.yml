@@ -1,17 +1,17 @@
-name: OWOVoting
-version: '1.0'
-main: oluni.official.minecraft.oWOVoting.OWOVoting
+name: MysterriaVoting
+version: '1.0.0'
+main: net.mysterria.voting.MysterriaVoting
 api-version: '1.21'
 commands:
   vote:
     usage: /<command>
-    permission: owovoting.use
+    permission: voting.vote
   voting:
     usage: /<command> [send|reload]
 permissions:
-  owovoting.vote:
+  voting.vote:
     default: true
-  owovoting.send:
+  voting.send:
     default: op
-  owovoting.reload:
+  voting.reload:
     default: op

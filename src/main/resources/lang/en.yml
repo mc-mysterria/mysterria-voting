@@ -1,0 +1,42 @@
+msg:
+  voting-message: "<red>Vote for our server and get cool rewards! <yellow>Click here!"
+  hover-text: "<red>Click!"
+  no-permission: "<red>You don't have permission for this command!"
+  only-player: "<red>This command can only be executed by a player!"
+  invalid-usage: "<red>Usage: /voting [send|reload]"
+  reload-success: "<green>Configuration reloaded successfully!"
+  thanks-title: "<gold>Thanks!"
+  thanks-subtitle: "<yellow>Thank you for voting!"
+
+menu-name: "<green>Voting"
+menu-items:
+  vote-site:
+    material: NETHER_STAR
+    display-name: "<green>Vote for our server!"
+    slot: 13
+    lore:
+      - '<green>Vote for our server on the website.'
+      - '<bold>And get a reward!'
+      - '<red>Left or right click'
+      - '<rainbow>To go to the website!</rainbow>'
+    click-actions:
+      left:
+        run-command:
+          console:
+            - 'give {target} diamond 1'
+        message:
+          - '<green>Voting site:'
+          - '<green><click:open_url:https://allmc.in.ua/mc-mysterria-net><hover:show_text:"<yellow>Click to open in browser">https://allmc.in.ua/mc-mysterria-net</hover></click>'
+        title:
+          title: "<gold>Thanks!"
+          subtitle: "<yellow>Thank you for voting!"
+      right:
+        run-command:
+          console:
+            - 'give {target} diamond 1'
+        message:
+          - '<green>Voting site:'
+          - '<green><click:open_url:https://allmc.in.ua/mc-mysterria-net><hover:show_text:"<yellow>Click to open in browser">https://allmc.in.ua/mc-mysterria-net</hover></click>'
+        title:
+          title: "<gold>Thanks!"
+          subtitle: "<yellow>Thank you for voting!"

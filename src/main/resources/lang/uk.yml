@@ -1,0 +1,42 @@
+msg:
+  voting-message: "<red>Голосуйте за сервер і отримуйте круті нагороди! <yellow>Клікніть тут!"
+  hover-text: "<red>Тиць!"
+  no-permission: "<red>У вас немає дозволу для цієї команди!"
+  only-player: "<red>Цю команду може виконати лише гравець!"
+  invalid-usage: "<red>Використовуйте: /voting [send|reload]"
+  reload-success: "<green>Конфігурацію успішно перезавантажено!"
+  thanks-title: "<gold>Дякую!"
+  thanks-subtitle: "<yellow>Дякуємо за голосування!"
+
+menu-name: "<green>Голосування"
+menu-items:
+  vote-site:
+    material: NETHER_STAR
+    display-name: "<green>Проголосуйте за наш сервер!"
+    slot: 13
+    lore:
+      - '<green>Проголосуй за наш сервер на сайті.'
+      - '<bold>Та отримай нагороду!'
+      - '<red>Тицяй лівою, або правою кнопкою миші'
+      - '<rainbow>Та переходь на сайт!</rainbow>'
+    click-actions:
+      left:
+        run-command:
+          console:
+            - 'give {target} diamond 1'
+        message:
+          - '<green>Сайт для голосування за нас:'
+          - '<green><click:open_url:https://allmc.in.ua/mc-mysterria-net><hover:show_text:"<yellow>Натисніть, щоб відкрити у браузері">https://allmc.in.ua/mc-mysterria-net</hover></click>'
+        title:
+          title: "<gold>Дякую!"
+          subtitle: "<yellow>Дякуємо за голосування!"
+      right:
+        run-command:
+          console:
+            - 'give {target} diamond 1'
+        message:
+          - '<green>Сайт для голосування за нас:'
+          - '<green><click:open_url:https://allmc.in.ua/mc-mysterria-net><hover:show_text:"<yellow>Натисніть, щоб відкрити у браузері">https://allmc.in.ua/mc-mysterria-net</hover></click>'
+        title:
+          title: "<gold>Дякую!"
+          subtitle: "<yellow>Дякуємо за голосування!"
