@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class MysterriaVoting extends JavaPlugin implements Listener {
+    
     private Map<String, Map<String, Inventory>> cachedMenus = new HashMap<>();
     private TranslationManager translationManager;
 
