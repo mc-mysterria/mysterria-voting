@@ -7,50 +7,108 @@ import net.mysterria.voting.utils.MessageUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ReminderManager {
     private final MysterriaVoting plugin;
-    private final Map<String, Reminder> reminders;
+    private final Map<String, Map<String, Reminder>> remindersByLanguage;
     private final Map<String, BukkitTask> tasks;
     private final Map<Player, Set<BossBar>> activeBossBars;
+    private final Map<String, FileConfiguration> reminderConfigs;
 
     public ReminderManager(MysterriaVoting plugin) {
         this.plugin = plugin;
-        this.reminders = new HashMap<>();
+        this.remindersByLanguage = new HashMap<>();
         this.tasks = new HashMap<>();
         this.activeBossBars = new ConcurrentHashMap<>();
+        this.reminderConfigs = new HashMap<>();
         loadReminders();
     }
 
     public void loadReminders() {
         stopAllTasks();
-        reminders.clear();
+        remindersByLanguage.clear();
+        reminderConfigs.clear();
 
-        ConfigurationSection remindersSection = plugin.getConfig().getConfigurationSection("reminders");
-        if (remindersSection == null) {
-            plugin.getLogger().warning("No reminders section found in config!");
-            return;
+        // Load reminder configurations for each language
+        String[] languages = {"en", "uk"};
+
+        for (String lang : languages) {
+            loadReminderLanguage(lang);
         }
 
-        for (String key : remindersSection.getKeys(false)) {
-            ConfigurationSection reminderConfig = remindersSection.getConfigurationSection(key);
-            if (reminderConfig != null) {
-                Reminder reminder = new Reminder(key, reminderConfig);
-                reminders.put(key, reminder);
-
-                if (reminder.isEnabled()) {
+        // Schedule reminders (only need to schedule once per unique reminder)
+        Set<String> scheduledReminders = new HashSet<>();
+        for (Map<String, Reminder> languageReminders : remindersByLanguage.values()) {
+            for (Reminder reminder : languageReminders.values()) {
+                if (reminder.isEnabled() && !scheduledReminders.contains(reminder.getId())) {
                     scheduleReminder(reminder);
+                    scheduledReminders.add(reminder.getId());
                 }
             }
         }
 
-        plugin.getLogger().info("Loaded " + reminders.size() + " reminders");
+        int totalReminders = remindersByLanguage.values().stream()
+            .mapToInt(Map::size)
+            .sum();
+        plugin.getLogger().info("Loaded " + totalReminders + " reminders across " + remindersByLanguage.size() + " languages");
+    }
+
+    private void loadReminderLanguage(String language) {
+        File reminderFile = new File(plugin.getDataFolder(), "reminders/" + language + ".yml");
+
+        // Create the directory and default file if it doesn't exist
+        if (!reminderFile.exists()) {
+            try {
+                reminderFile.getParentFile().mkdirs();
+
+                // Copy default file from resources
+                InputStream defaultFile = plugin.getResource("reminders/" + language + ".yml");
+                if (defaultFile != null) {
+                    Files.copy(defaultFile, reminderFile.toPath());
+                    defaultFile.close();
+                    plugin.getLogger().info("Created default reminder file for language: " + language);
+                } else {
+                    plugin.getLogger().warning("Default reminder file not found for language: " + language);
+                    return;
+                }
+            } catch (IOException e) {
+                plugin.getLogger().severe("Failed to create reminder file for language " + language + ": " + e.getMessage());
+                return;
+            }
+        }
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(reminderFile);
+        reminderConfigs.put(language, config);
+
+        ConfigurationSection remindersSection = config.getConfigurationSection("reminders");
+        if (remindersSection == null) {
+            plugin.getLogger().warning("No reminders section found in " + language + ".yml!");
+            return;
+        }
+
+        Map<String, Reminder> languageReminders = new HashMap<>();
+        for (String key : remindersSection.getKeys(false)) {
+            ConfigurationSection reminderConfig = remindersSection.getConfigurationSection(key);
+            if (reminderConfig != null) {
+                Reminder reminder = new Reminder(key, reminderConfig);
+                languageReminders.put(key, reminder);
+            }
+        }
+
+        remindersByLanguage.put(language, languageReminders);
+        plugin.getLogger().info("Loaded " + languageReminders.size() + " reminders for language: " + language);
     }
 
     private void scheduleReminder(Reminder reminder) {
@@ -68,30 +126,60 @@ public class ReminderManager {
         Collection<? extends Player> players = getTargetPlayers(reminder);
 
         for (Player player : players) {
-            if (reminder.getPermission() != null && !player.hasPermission(reminder.getPermission())) {
+            // Get player's localized reminder
+            Reminder localizedReminder = getLocalizedReminder(player, reminder.getId());
+            if (localizedReminder == null) {
+                continue; // Skip if no localized version found
+            }
+
+            if (localizedReminder.getPermission() != null && !player.hasPermission(localizedReminder.getPermission())) {
                 continue;
             }
 
             Map<String, String> placeholders = createPlaceholders(player);
 
-            switch (reminder.getType()) {
+            switch (localizedReminder.getType()) {
                 case CHAT:
-                    sendChatReminder(player, reminder, placeholders);
+                    sendChatReminder(player, localizedReminder, placeholders);
                     break;
                 case TITLE:
-                    sendTitleReminder(player, reminder, placeholders);
+                    sendTitleReminder(player, localizedReminder, placeholders);
                     break;
                 case ACTIONBAR:
-                    sendActionBarReminder(player, reminder, placeholders);
+                    sendActionBarReminder(player, localizedReminder, placeholders);
                     break;
                 case BOSSBAR:
-                    sendBossBarReminder(player, reminder, placeholders);
+                    sendBossBarReminder(player, localizedReminder, placeholders);
                     break;
                 case COMBINED:
-                    sendCombinedReminder(player, reminder, placeholders);
+                    sendCombinedReminder(player, localizedReminder, placeholders);
                     break;
             }
         }
+    }
+
+    private Reminder getLocalizedReminder(Player player, String reminderId) {
+        String playerLocale = getPlayerLocale(player);
+        Map<String, Reminder> languageReminders = remindersByLanguage.get(playerLocale);
+        if (languageReminders != null && languageReminders.containsKey(reminderId)) {
+            return languageReminders.get(reminderId);
+        }
+
+        // Fallback to English if player's language is not available
+        Map<String, Reminder> englishReminders = remindersByLanguage.get("en");
+        if (englishReminders != null) {
+            return englishReminders.get(reminderId);
+        }
+
+        return null;
+    }
+
+    private String getPlayerLocale(Player player) {
+        String locale = player.locale().getLanguage();
+        if (remindersByLanguage.containsKey(locale)) {
+            return locale;
+        }
+        return "en"; // Default to English
     }
 
     private void sendChatReminder(Player player, Reminder reminder, Map<String, String> placeholders) {
@@ -210,15 +298,20 @@ public class ReminderManager {
     }
 
     public void sendReminderById(String id) {
-        Reminder reminder = reminders.get(id);
-        if (reminder != null) {
-            sendReminder(reminder);
+        // Get any version of the reminder to use as base for scheduling
+        Reminder baseReminder = getAnyReminderById(id);
+        if (baseReminder != null) {
+            sendReminder(baseReminder);
         }
     }
 
     public void sendReminderToPlayer(String id, Player player) {
-        Reminder reminder = reminders.get(id);
+        Reminder reminder = getLocalizedReminder(player, id);
         if (reminder != null) {
+            if (reminder.getPermission() != null && !player.hasPermission(reminder.getPermission())) {
+                return;
+            }
+
             Map<String, String> placeholders = createPlaceholders(player);
 
             switch (reminder.getType()) {
@@ -241,6 +334,15 @@ public class ReminderManager {
         }
     }
 
+    private Reminder getAnyReminderById(String id) {
+        for (Map<String, Reminder> languageReminders : remindersByLanguage.values()) {
+            if (languageReminders.containsKey(id)) {
+                return languageReminders.get(id);
+            }
+        }
+        return null;
+    }
+
     public void stopAllTasks() {
         for (BukkitTask task : tasks.values()) {
             task.cancel();
@@ -257,11 +359,26 @@ public class ReminderManager {
     }
 
     public Map<String, Reminder> getReminders() {
-        return new HashMap<>(reminders);
+        // Return all reminders from English as base collection
+        Map<String, Reminder> englishReminders = remindersByLanguage.get("en");
+        return englishReminders != null ? new HashMap<>(englishReminders) : new HashMap<>();
+    }
+
+    public Map<String, Reminder> getReminders(String language) {
+        Map<String, Reminder> languageReminders = remindersByLanguage.get(language);
+        return languageReminders != null ? new HashMap<>(languageReminders) : new HashMap<>();
     }
 
     public Reminder getReminder(String id) {
-        return reminders.get(id);
+        return getAnyReminderById(id);
+    }
+
+    public Reminder getReminder(String id, String language) {
+        Map<String, Reminder> languageReminders = remindersByLanguage.get(language);
+        if (languageReminders != null) {
+            return languageReminders.get(id);
+        }
+        return null;
     }
 
     public void reload() {

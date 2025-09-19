@@ -70,7 +70,7 @@ public class ReminderCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        sender.sendMessage(MessageUtils.formatMessage("<green>Available reminders:", null));
+        sender.sendMessage(MessageUtils.formatMessage("<green>Available reminders (English base):", null));
         for (Reminder reminder : reminders.values()) {
             String status = reminder.isEnabled() ? "<green>✓" : "<red>✗";
             sender.sendMessage(MessageUtils.formatMessage(
@@ -78,6 +78,10 @@ public class ReminderCommand implements CommandExecutor, TabCompleter {
                 null
             ));
         }
+
+        // Show language availability
+        sender.sendMessage(MessageUtils.formatMessage("<yellow>Available languages: en, uk", null));
+        sender.sendMessage(MessageUtils.formatMessage("<gray>Use /reminder info <id> for detailed information", null));
     }
 
     private void handleSendCommand(CommandSender sender, String[] args) {
@@ -155,29 +159,40 @@ public class ReminderCommand implements CommandExecutor, TabCompleter {
         }
 
         String reminderId = args[1];
-        Reminder reminder = plugin.getReminderManager().getReminder(reminderId);
+        Reminder baseReminder = plugin.getReminderManager().getReminder(reminderId);
 
-        if (reminder == null) {
+        if (baseReminder == null) {
             sender.sendMessage(MessageUtils.formatMessage("<red>Reminder '" + reminderId + "' not found!", null));
             return;
         }
 
-        sender.sendMessage(MessageUtils.formatMessage("<green>Reminder Info: <white>" + reminder.getId(), null));
-        sender.sendMessage(MessageUtils.formatMessage("<gray>Name: <white>" + reminder.getName(), null));
-        sender.sendMessage(MessageUtils.formatMessage("<gray>Type: <white>" + reminder.getType(), null));
-        sender.sendMessage(MessageUtils.formatMessage("<gray>Enabled: <white>" + reminder.isEnabled(), null));
-        sender.sendMessage(MessageUtils.formatMessage("<gray>Interval: <white>" + reminder.getInterval() + "s", null));
+        sender.sendMessage(MessageUtils.formatMessage("<green>Reminder Info: <white>" + baseReminder.getId(), null));
+        sender.sendMessage(MessageUtils.formatMessage("<gray>Type: <white>" + baseReminder.getType(), null));
+        sender.sendMessage(MessageUtils.formatMessage("<gray>Enabled: <white>" + baseReminder.isEnabled(), null));
+        sender.sendMessage(MessageUtils.formatMessage("<gray>Interval: <white>" + baseReminder.getInterval() + "s", null));
 
-        if (reminder.getPermission() != null) {
-            sender.sendMessage(MessageUtils.formatMessage("<gray>Permission: <white>" + reminder.getPermission(), null));
+        if (baseReminder.getPermission() != null) {
+            sender.sendMessage(MessageUtils.formatMessage("<gray>Permission: <white>" + baseReminder.getPermission(), null));
         }
 
-        if (!reminder.getTargetWorlds().isEmpty()) {
-            sender.sendMessage(MessageUtils.formatMessage("<gray>Worlds: <white>" + String.join(", ", reminder.getTargetWorlds()), null));
+        if (!baseReminder.getTargetWorlds().isEmpty()) {
+            sender.sendMessage(MessageUtils.formatMessage("<gray>Worlds: <white>" + String.join(", ", baseReminder.getTargetWorlds()), null));
         }
 
-        if (reminder.getUrl() != null) {
-            sender.sendMessage(MessageUtils.formatMessage("<gray>URL: <white>" + reminder.getUrl(), null));
+        if (baseReminder.getUrl() != null) {
+            sender.sendMessage(MessageUtils.formatMessage("<gray>URL: <white>" + baseReminder.getUrl(), null));
+        }
+
+        // Show language-specific information
+        sender.sendMessage(MessageUtils.formatMessage("<yellow>Language versions:", null));
+        String[] languages = {"en", "uk"};
+        for (String lang : languages) {
+            Reminder langReminder = plugin.getReminderManager().getReminder(reminderId, lang);
+            if (langReminder != null) {
+                sender.sendMessage(MessageUtils.formatMessage(
+                    "<gray>  " + lang.toUpperCase() + ": <white>" + langReminder.getName(), null
+                ));
+            }
         }
     }
 

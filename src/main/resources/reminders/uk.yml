@@ -1,0 +1,121 @@
+# Ukrainian Reminder Configurations
+reminders:
+  website:
+    name: "Нагадування про сайт"
+    type: CHAT
+    enabled: true
+    interval: 600 # 10 хвилин
+    messages:
+      - "<gradient:green:blue>🌐 Відвідайте наш сайт для останніх оновлень та новин!</gradient>"
+      - "<green><click:open_url:https://mysterria.net><hover:show_text:\"<yellow>Натисніть, щоб відвідати наш сайт!\">mysterria.net</hover></click>"
+    url: "https://mysterria.net"
+    hover-text: "<yellow>Натисніть, щоб відвідати наш сайт!"
+    gradient:
+      start: "green"
+      end: "blue"
+
+  discord:
+    name: "Нагадування про Discord"
+    type: COMBINED
+    enabled: true
+    interval: 900 # 15 хвилин
+    messages:
+      - "<gradient:purple:pink>💬 Приєднуйтесь до нашої спільноти в Discord!</gradient>"
+      - "<purple><click:open_url:https://discord.gg/mysterria><hover:show_text:\"<yellow>Натисніть, щоб приєднатися до Discord!\">discord.gg/mysterria</hover></click>"
+    title:
+      text: "<gradient:purple:pink>Discord</gradient>"
+      subtitle: "<yellow>Приєднуйтесь до спільноти!"
+    actionbar:
+      text: "<gradient:purple:pink>💬 Приєднуйтесь до Discord: discord.gg/mysterria</gradient>"
+    url: "https://discord.gg/mysterria"
+    hover-text: "<yellow>Натисніть, щоб приєднатися до Discord!"
+    gradient:
+      start: "purple"
+      end: "pink"
+
+  voting:
+    name: "Нагадування про голосування"
+    type: BOSSBAR
+    enabled: true
+    interval: 1200 # 20 хвилин
+    bossbar:
+      text: "<gradient:gold:yellow>⭐ Голосуйте за сервер і отримуйте чудові нагороди! ⭐</gradient>"
+      color: YELLOW
+      style: SEGMENTED_20
+      duration: 15
+    url: "https://vote.mysterria.net"
+    hover-text: "<yellow>Натисніть, щоб проголосувати!"
+    gradient:
+      start: "gold"
+      end: "yellow"
+
+  rules:
+    name: "Нагадування про правила"
+    type: TITLE
+    enabled: true
+    interval: 1800 # 30 хвилин
+    title:
+      text: "<gradient:red:orange>📋 Правила сервера</gradient>"
+      subtitle: "<yellow>Введіть /rules щоб прочитати їх!"
+    gradient:
+      start: "red"
+      end: "orange"
+    target-worlds:
+      - "world"
+      - "world_nether"
+
+  wiki:
+    name: "Нагадування про вікі"
+    type: ACTIONBAR
+    enabled: true
+    interval: 450 # 7.5 хвилин
+    actionbar:
+      text: "<gradient:cyan:aqua>📖 Перевірте нашу вікі для гайдів та інструкцій!</gradient>"
+    url: "https://wiki.mysterria.net"
+    hover-text: "<yellow>Натисніть, щоб відвідати вікі!"
+    gradient:
+      start: "cyan"
+      end: "aqua"
+
+  events:
+    name: "Нагадування про події"
+    type: COMBINED
+    enabled: false # За замовчуванням вимкнено
+    interval: 2400 # 40 хвилин
+    messages:
+      - "<gradient:rainbow>🎉 Не забувайте про наші щотижневі події!</gradient>"
+      - "<green>Перевірте /events для інформації про поточні події"
+    title:
+      text: "<gradient:rainbow>🎉 Події</gradient>"
+      subtitle: "<yellow>Доступні щотижневі події!"
+    bossbar:
+      text: "<gradient:rainbow>🎉 Доступні щотижневі події! Введіть /events</gradient>"
+      color: GREEN
+      style: SOLID
+      duration: 10
+    permission: "voting.events"
+
+  shop:
+    name: "Нагадування про магазин"
+    type: CHAT
+    enabled: true
+    interval: 1500 # 25 хвилин
+    messages:
+      - "<gradient:gold:orange>🛒 Відвідайте наш магазин для ексклюзивних предметів!</gradient>"
+      - "<gold><click:open_url:https://shop.mysterria.net><hover:show_text:\"<yellow>Натисніть, щоб відвідати магазин!\">shop.mysterria.net</hover></click>"
+    url: "https://shop.mysterria.net"
+    hover-text: "<yellow>Натисніть, щоб відвідати магазин!"
+    gradient:
+      start: "gold"
+      end: "orange"
+
+  support:
+    name: "Нагадування про підтримку"
+    type: ACTIONBAR
+    enabled: true
+    interval: 3600 # 60 хвилин
+    actionbar:
+      text: "<gradient:blue:cyan>💡 Потрібна допомога? Використовуйте /help або запитайте в чаті!</gradient>"
+    gradient:
+      start: "blue"
+      end: "cyan"
