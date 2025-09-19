@@ -1,3 +1,100 @@
 default-language: en
 
 menu-size: 27
+
+# Enhanced Reminder System Configuration
+reminders:
+  website:
+    name: "Website Reminder"
+    type: CHAT
+    enabled: true
+    interval: 600 # 10 minutes
+    messages:
+      - "<gradient:green:blue>Visit our website for updates and news!</gradient>"
+      - "<green><click:open_url:https://mysterria.net><hover:show_text:\"<yellow>Click to visit our website!\">🌐 mysterria.net</hover></click>"
+    url: "https://mysterria.net"
+    hover-text: "<yellow>Click to visit our website!"
+    gradient:
+      start: "green"
+      end: "blue"
+
+  discord:
+    name: "Discord Reminder"
+    type: COMBINED
+    enabled: true
+    interval: 900 # 15 minutes
+    messages:
+      - "<gradient:purple:pink>Join our Discord community!</gradient>"
+      - "<purple><click:open_url:https://discord.gg/mysterria><hover:show_text:\"<yellow>Click to join Discord!\">💬 discord.gg/mysterria</hover></click>"
+    title:
+      text: "<gradient:purple:pink>Discord</gradient>"
+      subtitle: "<yellow>Join our community!"
+    actionbar:
+      text: "<gradient:purple:pink>💬 Join Discord: discord.gg/mysterria</gradient>"
+    url: "https://discord.gg/mysterria"
+    hover-text: "<yellow>Click to join Discord!"
+    gradient:
+      start: "purple"
+      end: "pink"
+
+  voting:
+    name: "Voting Reminder"
+    type: BOSSBAR
+    enabled: true
+    interval: 1200 # 20 minutes
+    bossbar:
+      text: "<gradient:gold:yellow>⭐ Vote for the server and get rewards! ⭐</gradient>"
+      color: YELLOW
+      style: SEGMENTED_20
+      duration: 15
+    url: "https://vote.mysterria.net"
+    hover-text: "<yellow>Click to vote!"
+    gradient:
+      start: "gold"
+      end: "yellow"
+
+  rules:
+    name: "Rules Reminder"
+    type: TITLE
+    enabled: true
+    interval: 1800 # 30 minutes
+    title:
+      text: "<gradient:red:orange>📋 Server Rules</gradient>"
+      subtitle: "<yellow>Type /rules to read them!"
+    gradient:
+      start: "red"
+      end: "orange"
+    target-worlds:
+      - "world"
+      - "world_nether"
+
+  wiki:
+    name: "Wiki Reminder"
+    type: ACTIONBAR
+    enabled: true
+    interval: 450 # 7.5 minutes
+    actionbar:
+      text: "<gradient:cyan:aqua>📖 Check our wiki for guides and tutorials!</gradient>"
+    url: "https://wiki.mysterria.net"
+    hover-text: "<yellow>Click to visit wiki!"
+    gradient:
+      start: "cyan"
+      end: "aqua"
+
+  events:
+    name: "Events Reminder"
+    type: COMBINED
+    enabled: false # Disabled by default
+    interval: 2400 # 40 minutes
+    messages:
+      - "<gradient:rainbow>🎉 Don't forget about our weekly events!</gradient>"
+      - "<green>Check /events for more information"
+    title:
+      text: "<gradient:rainbow>🎉 Events</gradient>"
+      subtitle: "<yellow>Weekly events are available!"
+    bossbar:
+      text: "<gradient:rainbow>🎉 Weekly events available! Type /events</gradient>"
+      color: GREEN
+      style: SOLID
+      duration: 10
+    permission: "voting.events"

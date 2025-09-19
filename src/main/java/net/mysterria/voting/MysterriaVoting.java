@@ -2,8 +2,10 @@ package net.mysterria.voting;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.mysterria.voting.commands.ReminderCommand;
 import net.mysterria.voting.commands.VotingCommand;
 import net.mysterria.voting.commands.VotingOpenGui;
+import net.mysterria.voting.reminders.ReminderManager;
 import net.mysterria.voting.utils.MessageUtils;
 import net.mysterria.voting.utils.TranslationManager;
 import org.bukkit.Bukkit;
@@ -13,6 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -27,27 +30,39 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
     
     private Map<String, Map<String, Inventory>> cachedMenus = new HashMap<>();
     private TranslationManager translationManager;
+    private ReminderManager reminderManager;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         translationManager = new TranslationManager(this);
         MessageUtils.setTranslationManager(translationManager);
+        reminderManager = new ReminderManager(this);
+
         Objects.requireNonNull(getCommand("voting")).setExecutor(new VotingCommand(this));
         Objects.requireNonNull(getCommand("voting")).setTabCompleter(new VotingCommand(this));
         Objects.requireNonNull(getCommand("vote")).setExecutor(new VotingOpenGui(this));
+        Objects.requireNonNull(getCommand("reminder")).setExecutor(new ReminderCommand(this));
+        Objects.requireNonNull(getCommand("reminder")).setTabCompleter(new ReminderCommand(this));
+
         Bukkit.getPluginManager().registerEvents(this, this);
         loadMenus();
     }
 
     @Override
     public void onDisable() {
+        if (reminderManager != null) {
+            reminderManager.stopAllTasks();
+        }
         cachedMenus.clear();
     }
 
     public void reload() {
         reloadConfig();
         translationManager.reload();
+        if (reminderManager != null) {
+            reminderManager.reload();
+        }
         cachedMenus.clear();
         loadMenus();
     }
@@ -164,5 +179,17 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
             }
         }
         p.closeInventory();
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        // Clean up any active boss bars for the disconnecting player
+        if (reminderManager != null) {
+            reminderManager.cleanupPlayerBossBars(event.getPlayer());
+        }
+    }
+
+    public ReminderManager getReminderManager() {
+        return reminderManager;
     }
 }

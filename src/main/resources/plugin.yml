@@ -8,10 +8,25 @@ commands:
     permission: voting.vote
   voting:
     usage: /<command> [send|reload]
+  reminder:
+    usage: /<command> [list|send|sendto|info|reload|help]
+    permission: voting.reminder
 permissions:
   voting.vote:
     default: true
   voting.send:
     default: op
   voting.reload:
+    default: op
+  voting.reminder:
+    default: op
+  voting.reminder.list:
+    default: op
+  voting.reminder.send:
+    default: op
+  voting.reminder.sendto:
+    default: op
+  voting.reminder.info:
+    default: op
+  voting.reminder.reload:
     default: op
