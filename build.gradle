@@ -8,7 +8,18 @@ group = 'net.mysterria.voting'
 version = '1.0.0'
 
 repositories {
-    mavenLocal()
+    // audit-client is vendored in libs/maven so CI runners without ~/.m2 can resolve it.
+    maven {
+        name = "vendored"
+        url = uri("libs/maven")
+        metadataSources {
+            mavenPom()
+            artifact()
+        }
+        content {
+            includeGroup("dev.ua.ikeepcalm.mysterria")
+        }
+    }
     mavenCentral()
     maven {
         name = "papermc-repo"
