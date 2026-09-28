@@ -1,12 +1,14 @@
 plugins {
     id 'java'
     id("xyz.jpenilla.run-paper") version "2.3.1"
+    id('com.gradleup.shadow') version '9.4.1'
 }
 
 group = 'net.mysterria.voting'
 version = '1.0.0'
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven {
         name = "papermc-repo"
@@ -18,8 +20,20 @@ repositories {
     }
 }
 
+tasks.build.dependsOn tasks.shadowJar
+
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT")
+    implementation 'dev.ua.ikeepcalm.mysterria:audit-client:1.0.0'
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    relocate 'dev.ua.ikeepcalm.mysterria.audit', 'net.mysterria.voting.libs.audit'
+}
+
+jar {
+    enabled = false
 }
 
 tasks {
