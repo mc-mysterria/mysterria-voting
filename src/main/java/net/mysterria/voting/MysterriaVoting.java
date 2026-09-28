@@ -3,6 +3,7 @@ package net.mysterria.voting;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import net.mysterria.voting.audit.AdminAudit;
 import net.mysterria.voting.audit.VotingAuditEmitter;
 import net.mysterria.voting.claims.VoteClaimStore;
 import net.mysterria.voting.commands.ReminderCommand;
@@ -38,12 +39,14 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
     private TranslationManager translationManager;
     private ReminderManager reminderManager;
     private VotingAuditEmitter auditEmitter;
+    private AdminAudit adminAudit;
     private VoteClickActions clickActions;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         auditEmitter = new VotingAuditEmitter(this);
+        adminAudit = new AdminAudit(this::getAuditEmitter);
         clickActions = new VoteClickActions(new VoteClaimStore(this), this::getAuditEmitter);
         translationManager = new TranslationManager(this);
         MessageUtils.setTranslationManager(translationManager);
@@ -192,4 +195,12 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
         return auditEmitter;
     }
 
+    public AdminAudit getAdminAudit() {
+        return adminAudit;
+    }
+
+    /** Loaded language files keyed by language code; fingerprinted around a reload for the audit row. */
+    public Map<String, FileConfiguration> getTranslations() {
+        return translationManager.translations;
+    }
 }
