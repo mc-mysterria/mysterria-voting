@@ -28,14 +28,19 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 public final class MysterriaVoting extends JavaPlugin implements Listener {
     
     private Map<String, Map<String, Inventory>> cachedMenus = new HashMap<>();
+    /** Menus replaced by a reload that may still be open; clicks in them are cancelled but run nothing. */
+    private final Set<Inventory> retiredMenus = Collections.newSetFromMap(new WeakHashMap<>());
     private TranslationManager translationManager;
     private ReminderManager reminderManager;
     private VotingAuditEmitter auditEmitter;
@@ -83,8 +88,15 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
         if (reminderManager != null) {
             reminderManager.reload();
         }
+        retireMenus();
         cachedMenus.clear();
         loadMenus();
+    }
+
+    private void retireMenus() {
+        for (Map<String, Inventory> menus : cachedMenus.values()) {
+            retiredMenus.addAll(menus.values());
+        }
     }
 
     private void loadMenus() {
@@ -143,35 +155,50 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        
-        String playerLocale = getPlayerLocale(p);
-        FileConfiguration langConfig = translationManager.translations.get(playerLocale);
-        if (langConfig == null) langConfig = translationManager.translations.get("en");
-        
-        Component menuName = MessageUtils.formatMessage(langConfig.getString("menu-name"), null);
-        if (!e.getView().title().equals(menuName)) return;
+
+        Inventory top = e.getView().getTopInventory();
+        String menuLang = menuLanguageOf(top);
+        if (menuLang == null) {
+            if (retiredMenus.contains(top)) e.setCancelled(true);
+            return;
+        }
         e.setCancelled(true);
+        FileConfiguration langConfig = translationManager.translations.get(menuLang);
+        if (langConfig == null) return;
+        // Only slots of the vote menu itself run actions; the player's own inventory below it never does.
+        if (!top.equals(e.getClickedInventory())) return;
         ItemStack clickedItem = e.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
         int slot = e.getSlot();
+        String key = menuItemAt(langConfig, slot);
+        if (key == null) return;
         String clickType = e.getClick().isLeftClick() ? "left" : "right";
-        if (langConfig.getConfigurationSection("menu-items") != null) {
-            for (String key : Objects.requireNonNull(langConfig.getConfigurationSection("menu-items")).getKeys(false)) {
-                String path = "menu-items." + key;
-                if (langConfig.getInt(path + ".slot") == slot) {
-                    clickActions.execute(new MenuClick(p, langConfig, playerLocale, key, slot, e.getRawSlot(),
-                            clickType, clickedSide(e), holderType(e.getView().getTopInventory()),
-                            PlainTextComponentSerializer.plainText().serialize(e.getView().title()), clickedItem));
-                    break;
-                }
-            }
+        clickActions.execute(new MenuClick(p, langConfig, menuLang, key, slot, e.getRawSlot(),
+                clickType, clickedSide(e), holderType(top),
+                PlainTextComponentSerializer.plainText().serialize(e.getView().title()), clickedItem));
+    }
+
+    /** Language of the cached vote menu backing this inventory (CraftInventory equality), or {@code null}. */
+    private String menuLanguageOf(Inventory inventory) {
+        for (Map.Entry<String, Map<String, Inventory>> entry : cachedMenus.entrySet()) {
+            if (inventory.equals(entry.getValue().get("voting"))) return entry.getKey();
         }
+        return null;
+    }
+
+    private static String menuItemAt(FileConfiguration langConfig, int slot) {
+        var items = langConfig.getConfigurationSection("menu-items");
+        if (items == null) return null;
+        for (String key : items.getKeys(false)) {
+            if (items.getInt(key + ".slot") == slot) return key;
+        }
+        return null;
     }
 
     private static String clickedSide(InventoryClickEvent e) {
         Inventory clicked = e.getClickedInventory();
         if (clicked == null) return "outside";
-        return clicked == e.getView().getTopInventory() ? "top" : "bottom";
+        return clicked.equals(e.getView().getTopInventory()) ? "top" : "bottom";
     }
 
     private static String holderType(Inventory inventory) {

@@ -75,9 +75,12 @@ Per event:
   `claims_unavailable`, `persist_failed` or `no_reward`), `item_material`,
   and `item_uuid` / `parent_item_uuid` when the clicked item carries the
   `circleofimagination:item_uuid` / `circleofimagination:item_parent` string
-  tags. With `clicked_inventory` and `inventory_holder_type` you can tell a
-  real vote-menu click from a click in the player's own inventory or in
-  another inventory that has the same title.
+  tags. The menu is recognised by its inventory, not its title, and only
+  clicks in the menu's own slots run actions, so `clicked_inventory` is
+  always `top` and `inventory_holder_type` is `none`. The fields stay as a
+  check on that rule. Another inventory with the same title, or a slot in the
+  player's own inventory, produces no row. A menu left open across
+  `/voting reload` stays locked but runs no actions until it is reopened.
 - `voting.reward.claimed` / `claim_denied`: `command_count`, `reason` (not on
   `COMMITTED`), `claimed_at` (epoch millis of the stored claim, when one
   exists).
