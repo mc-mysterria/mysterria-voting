@@ -2,6 +2,7 @@ package net.mysterria.voting;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.mysterria.voting.claims.VoteClaimStore;
 import net.mysterria.voting.commands.ReminderCommand;
 import net.mysterria.voting.commands.VotingCommand;
 import net.mysterria.voting.commands.VotingOpenGui;
@@ -21,20 +22,27 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 public final class MysterriaVoting extends JavaPlugin implements Listener {
     
     private Map<String, Map<String, Inventory>> cachedMenus = new HashMap<>();
+    /** Menus replaced by a reload that may still be open; clicks in them are cancelled but run nothing. */
+    private final Set<Inventory> retiredMenus = Collections.newSetFromMap(new WeakHashMap<>());
     private TranslationManager translationManager;
     private ReminderManager reminderManager;
+    private VoteClaimStore claims;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        claims = new VoteClaimStore(this);
         translationManager = new TranslationManager(this);
         MessageUtils.setTranslationManager(translationManager);
         reminderManager = new ReminderManager(this);
@@ -63,8 +71,15 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
         if (reminderManager != null) {
             reminderManager.reload();
         }
+        retireMenus();
         cachedMenus.clear();
         loadMenus();
+    }
+
+    private void retireMenus() {
+        for (Map<String, Inventory> menus : cachedMenus.values()) {
+            retiredMenus.addAll(menus.values());
+        }
     }
 
     private void loadMenus() {
@@ -123,34 +138,56 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        
-        String playerLocale = getPlayerLocale(p);
-        FileConfiguration langConfig = translationManager.translations.get(playerLocale);
-        if (langConfig == null) langConfig = translationManager.translations.get("en");
-        
-        Component menuName = MessageUtils.formatMessage(langConfig.getString("menu-name"), null);
-        if (!e.getView().title().equals(menuName)) return;
+
+        Inventory top = e.getView().getTopInventory();
+        String menuLang = menuLanguageOf(top);
+        if (menuLang == null) {
+            if (retiredMenus.contains(top)) e.setCancelled(true);
+            return;
+        }
         e.setCancelled(true);
+        FileConfiguration langConfig = translationManager.translations.get(menuLang);
+        if (langConfig == null) return;
+        // Only slots of the vote menu itself run actions; the player's own inventory below it never does.
+        if (!top.equals(e.getClickedInventory())) return;
         ItemStack clickedItem = e.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
-        int slot = e.getSlot();
+        String key = menuItemAt(langConfig, e.getSlot());
+        if (key == null) return;
         String clickType = e.getClick().isLeftClick() ? "left" : "right";
-        if (langConfig.getConfigurationSection("menu-items") != null) {
-            for (String key : Objects.requireNonNull(langConfig.getConfigurationSection("menu-items")).getKeys(false)) {
-                String path = "menu-items." + key;
-                if (langConfig.getInt(path + ".slot") == slot) {
-                    executeClickActions(p, langConfig, path + ".click-actions." + clickType);
-                    break;
-                }
-            }
-        }
+        executeClickActions(p, langConfig, key, "menu-items." + key + ".click-actions." + clickType);
     }
 
-    private void executeClickActions(Player p, FileConfiguration langConfig, String path) {
+    /** Language of the cached vote menu backing this inventory (CraftInventory equality), or {@code null}. */
+    private String menuLanguageOf(Inventory inventory) {
+        for (Map.Entry<String, Map<String, Inventory>> entry : cachedMenus.entrySet()) {
+            if (inventory.equals(entry.getValue().get("voting"))) return entry.getKey();
+        }
+        return null;
+    }
+
+    private static String menuItemAt(FileConfiguration langConfig, int slot) {
+        var items = langConfig.getConfigurationSection("menu-items");
+        if (items == null) return null;
+        for (String key : items.getKeys(false)) {
+            if (items.getInt(key + ".slot") == slot) return key;
+        }
+        return null;
+    }
+
+    /**
+     * Runs a menu item's click actions. Console commands are the reward and run at most once per
+     * player per service (the menu-items key): the claim is persisted before they are dispatched.
+     * Player commands, messages and titles run on every click.
+     */
+    private void executeClickActions(Player p, FileConfiguration langConfig, String service, String path) {
         if (!langConfig.contains(path)) return;
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("target", p.getName());
-        
+        List<String> consoleCmds = langConfig.contains(path + ".run-command.console")
+                ? langConfig.getStringList(path + ".run-command.console") : List.of();
+        boolean rewardClaimed = !consoleCmds.isEmpty() && claimReward(p, service);
+
         if (langConfig.contains(path + ".run-command.player")) {
             List<String> playerCmds = langConfig.getStringList(path + ".run-command.player");
             for (String cmd : playerCmds) {
@@ -158,8 +195,7 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
                 p.performCommand(formattedCmd);
             }
         }
-        if (langConfig.contains(path + ".run-command.console")) {
-            List<String> consoleCmds = langConfig.getStringList(path + ".run-command.console");
+        if (rewardClaimed) {
             for (String cmd : consoleCmds) {
                 String formattedCmd = MessageUtils.formatPlain(cmd, placeholders);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), formattedCmd);
@@ -179,6 +215,13 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
             }
         }
         p.closeInventory();
+    }
+
+    /** True only when this click records the player's first claim of the service. */
+    private boolean claimReward(Player p, String service) {
+        if (claims.claimedAt(p.getUniqueId(), service) != null) return false;
+        if (!claims.isAvailable()) return false;
+        return claims.claim(p.getUniqueId(), service, System.currentTimeMillis());
     }
 
     @EventHandler
