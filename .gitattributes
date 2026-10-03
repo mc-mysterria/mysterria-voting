@@ -1,0 +1,2 @@
+# Vendored Maven artifacts are stored byte-for-byte so their checksum files stay valid on every OS.
+libs/maven/** -text

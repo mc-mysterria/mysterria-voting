@@ -2,10 +2,15 @@ package net.mysterria.voting;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import net.mysterria.voting.audit.AdminAudit;
+import net.mysterria.voting.audit.VotingAuditEmitter;
 import net.mysterria.voting.claims.VoteClaimStore;
 import net.mysterria.voting.commands.ReminderCommand;
 import net.mysterria.voting.commands.VotingCommand;
 import net.mysterria.voting.commands.VotingOpenGui;
+import net.mysterria.voting.menu.MenuClick;
+import net.mysterria.voting.menu.VoteClickActions;
 import net.mysterria.voting.reminders.ReminderManager;
 import net.mysterria.voting.utils.MessageUtils;
 import net.mysterria.voting.utils.TranslationManager;
@@ -18,6 +23,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -37,12 +43,16 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
     private final Set<Inventory> retiredMenus = Collections.newSetFromMap(new WeakHashMap<>());
     private TranslationManager translationManager;
     private ReminderManager reminderManager;
-    private VoteClaimStore claims;
+    private VotingAuditEmitter auditEmitter;
+    private AdminAudit adminAudit;
+    private VoteClickActions clickActions;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        claims = new VoteClaimStore(this);
+        auditEmitter = new VotingAuditEmitter(this);
+        adminAudit = new AdminAudit(this::getAuditEmitter);
+        clickActions = new VoteClickActions(new VoteClaimStore(this), this::getAuditEmitter);
         translationManager = new TranslationManager(this);
         MessageUtils.setTranslationManager(translationManager);
         reminderManager = new ReminderManager(this);
@@ -59,10 +69,17 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        if (reminderManager != null) {
-            reminderManager.stopAllTasks();
+        try {
+            if (reminderManager != null) {
+                reminderManager.stopAllTasks();
+            }
+            cachedMenus.clear();
+        } finally {
+            if (auditEmitter != null) {
+                auditEmitter.close();
+                auditEmitter = null;
+            }
         }
-        cachedMenus.clear();
     }
 
     public void reload() {
@@ -152,10 +169,13 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
         if (!top.equals(e.getClickedInventory())) return;
         ItemStack clickedItem = e.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
-        String key = menuItemAt(langConfig, e.getSlot());
+        int slot = e.getSlot();
+        String key = menuItemAt(langConfig, slot);
         if (key == null) return;
         String clickType = e.getClick().isLeftClick() ? "left" : "right";
-        executeClickActions(p, langConfig, key, "menu-items." + key + ".click-actions." + clickType);
+        clickActions.execute(new MenuClick(p, langConfig, menuLang, key, slot, e.getRawSlot(),
+                clickType, clickedSide(e), holderType(top),
+                PlainTextComponentSerializer.plainText().serialize(e.getView().title()), clickedItem));
     }
 
     /** Language of the cached vote menu backing this inventory (CraftInventory equality), or {@code null}. */
@@ -175,53 +195,15 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
         return null;
     }
 
-    /**
-     * Runs a menu item's click actions. Console commands are the reward and run at most once per
-     * player per service (the menu-items key): the claim is persisted before they are dispatched.
-     * Player commands, messages and titles run on every click.
-     */
-    private void executeClickActions(Player p, FileConfiguration langConfig, String service, String path) {
-        if (!langConfig.contains(path)) return;
-        Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("target", p.getName());
-        List<String> consoleCmds = langConfig.contains(path + ".run-command.console")
-                ? langConfig.getStringList(path + ".run-command.console") : List.of();
-        boolean rewardClaimed = !consoleCmds.isEmpty() && claimReward(p, service);
-
-        if (langConfig.contains(path + ".run-command.player")) {
-            List<String> playerCmds = langConfig.getStringList(path + ".run-command.player");
-            for (String cmd : playerCmds) {
-                String formattedCmd = MessageUtils.formatPlain(cmd, placeholders);
-                p.performCommand(formattedCmd);
-            }
-        }
-        if (rewardClaimed) {
-            for (String cmd : consoleCmds) {
-                String formattedCmd = MessageUtils.formatPlain(cmd, placeholders);
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), formattedCmd);
-            }
-        }
-        if (langConfig.contains(path + ".message")) {
-            List<String> msgs = langConfig.getStringList(path + ".message");
-            for (String msg : msgs) {
-                p.sendMessage(MessageUtils.formatMessage(msg, placeholders));
-            }
-        }
-        if (langConfig.contains(path + ".title")) {
-            String titleText = langConfig.getString(path + ".title.title");
-            String subtitleText = langConfig.getString(path + ".title.subtitle");
-            if (titleText != null || subtitleText != null) {
-                MessageUtils.sendTitle(p, titleText, subtitleText, placeholders);
-            }
-        }
-        p.closeInventory();
+    private static String clickedSide(InventoryClickEvent e) {
+        Inventory clicked = e.getClickedInventory();
+        if (clicked == null) return "outside";
+        return clicked.equals(e.getView().getTopInventory()) ? "top" : "bottom";
     }
 
-    /** True only when this click records the player's first claim of the service. */
-    private boolean claimReward(Player p, String service) {
-        if (claims.claimedAt(p.getUniqueId(), service) != null) return false;
-        if (!claims.isAvailable()) return false;
-        return claims.claim(p.getUniqueId(), service, System.currentTimeMillis());
+    private static String holderType(Inventory inventory) {
+        InventoryHolder holder = inventory.getHolder(false);
+        return holder == null ? "none" : holder.getClass().getSimpleName();
     }
 
     @EventHandler
@@ -234,5 +216,17 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
 
     public ReminderManager getReminderManager() {
         return reminderManager;
+    }
+
+    public VotingAuditEmitter getAuditEmitter() {
+        return auditEmitter;
+    }
+
+    public AdminAudit getAdminAudit() {
+        return adminAudit;
+    }
+
+    public Map<String, FileConfiguration> getTranslations() {
+        return translationManager.translations;
     }
 }

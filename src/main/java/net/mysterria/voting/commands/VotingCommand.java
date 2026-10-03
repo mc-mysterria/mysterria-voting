@@ -4,6 +4,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.mysterria.voting.MysterriaVoting;
+import net.mysterria.voting.audit.AdminAudit;
+import net.mysterria.voting.audit.ConfigFingerprint;
 import net.mysterria.voting.utils.MessageUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -44,7 +46,12 @@ public class VotingCommand implements CommandExecutor, TabCompleter {
                     }
                     return true;
                 }
+                ConfigFingerprint before = AdminAudit.fingerprint(
+                        () -> ConfigFingerprint.full(plugin.getTranslations(), plugin.getReminderManager()));
                 plugin.reload();
+                ConfigFingerprint after = AdminAudit.fingerprint(
+                        () -> ConfigFingerprint.full(plugin.getTranslations(), plugin.getReminderManager()));
+                plugin.getAdminAudit().reloaded(s, "voting", before, after);
                 if (s instanceof Player p) {
                     s.sendMessage(MessageUtils.formatTranslatedMessage(p, "msg.reload-success", null));
                 } else {
@@ -61,7 +68,9 @@ public class VotingCommand implements CommandExecutor, TabCompleter {
                     }
                     return true;
                 }
+                int recipients = 0;
                 for (Player p : Bukkit.getOnlinePlayers()) {
+                    recipients++;
                     Component msgComponent = MessageUtils.formatTranslatedMessage(p, "msg.voting-message", null);
                     Component hoverComponent = MessageUtils.formatTranslatedMessage(p, "msg.hover-text", null);
                     Component finalComponent = msgComponent
@@ -69,6 +78,7 @@ public class VotingCommand implements CommandExecutor, TabCompleter {
                             .hoverEvent(HoverEvent.showText(hoverComponent));
                     p.sendMessage(finalComponent);
                 }
+                plugin.getAdminAudit().broadcast(s, recipients);
                 return true;
 
             default:

@@ -1,6 +1,8 @@
 package net.mysterria.voting.commands;
 
 import net.mysterria.voting.MysterriaVoting;
+import net.mysterria.voting.audit.AdminAudit;
+import net.mysterria.voting.audit.ConfigFingerprint;
 import net.mysterria.voting.reminders.Reminder;
 import net.mysterria.voting.utils.MessageUtils;
 import org.bukkit.Bukkit;
@@ -104,6 +106,7 @@ public class ReminderCommand implements CommandExecutor, TabCompleter {
         }
 
         plugin.getReminderManager().sendReminderById(reminderId);
+        plugin.getAdminAudit().reminderSent(sender, reminderId, null, Bukkit.getOnlinePlayers().size());
         sender.sendMessage(MessageUtils.formatMessage("<green>Reminder '" + reminderId + "' sent to all players!", null));
     }
 
@@ -134,6 +137,7 @@ public class ReminderCommand implements CommandExecutor, TabCompleter {
         }
 
         plugin.getReminderManager().sendReminderToPlayer(reminderId, target);
+        plugin.getAdminAudit().reminderSent(sender, reminderId, target, 0);
         sender.sendMessage(MessageUtils.formatMessage("<green>Reminder '" + reminderId + "' sent to " + target.getName() + "!", null));
     }
 
@@ -143,7 +147,10 @@ public class ReminderCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
+        ConfigFingerprint before = AdminAudit.fingerprint(() -> ConfigFingerprint.reminders(plugin.getReminderManager()));
         plugin.getReminderManager().reload();
+        ConfigFingerprint after = AdminAudit.fingerprint(() -> ConfigFingerprint.reminders(plugin.getReminderManager()));
+        plugin.getAdminAudit().reloaded(sender, "reminders", before, after);
         sender.sendMessage(MessageUtils.formatMessage("<green>Reminders reloaded successfully!", null));
     }
 
