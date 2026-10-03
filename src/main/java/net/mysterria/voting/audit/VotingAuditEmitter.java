@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-/** Best-effort bridge to the optional shared Mysterria audit ledger. */
 public final class VotingAuditEmitter implements AutoCloseable {
     private static final int MAX_TEXT = 256;
     private static final int MAX_LONG_TEXT = 1_024;
@@ -37,9 +36,8 @@ public final class VotingAuditEmitter implements AutoCloseable {
     }
 
     /**
-     * Builds and emits one staff-restricted voting event. Never throws, including when the
-     * row builder fails; audit delivery must not gate rewards, menus or commands. The builder
-     * runs synchronously on the caller's (main) thread.
+     * Never throws, including when the row builder fails; audit delivery must not gate rewards,
+     * menus or commands. The builder runs synchronously on the caller's (main) thread.
      */
     public void emit(Supplier<AuditRow> source) {
         if (producer == null || source == null) {

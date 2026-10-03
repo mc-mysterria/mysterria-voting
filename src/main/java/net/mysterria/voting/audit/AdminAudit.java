@@ -11,10 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-/**
- * Audit rows for staff commands: reloads, vote broadcasts and manual reminders. Main thread
- * only. Rows are built inside the emitter's guard and never affect the command.
- */
+/** Main thread only. Rows are built inside the emitter's guard and never affect the command. */
 public final class AdminAudit {
     private final Supplier<VotingAuditEmitter> audit;
 
@@ -22,7 +19,6 @@ public final class AdminAudit {
         this.audit = audit;
     }
 
-    /** Computes a fingerprint without ever failing the surrounding command. */
     public static ConfigFingerprint fingerprint(Supplier<ConfigFingerprint> source) {
         try {
             return source.get();
@@ -31,10 +27,6 @@ public final class AdminAudit {
         }
     }
 
-    /**
-     * Emits {@code voting.admin.reload} after a reload has been applied. {@code before} and
-     * {@code after} are fingerprints taken immediately around the reload.
-     */
     public void reloaded(CommandSender sender, String scope, ConfigFingerprint before, ConfigFingerprint after) {
         send(() -> {
             Map<String, Object> metadata = actor(sender);
@@ -60,7 +52,6 @@ public final class AdminAudit {
         });
     }
 
-    /** Emits {@code voting.admin.broadcast} after the clickable vote message was sent. */
     public void broadcast(CommandSender sender, int recipientCount) {
         send(() -> {
             Map<String, Object> metadata = actor(sender);
@@ -69,7 +60,6 @@ public final class AdminAudit {
         });
     }
 
-    /** Emits {@code voting.admin.reminder_sent}; {@code target} is null for a send to everyone. */
     public void reminderSent(CommandSender sender, String reminderId, Player target, int onlineCount) {
         send(() -> {
             Map<String, Object> metadata = actor(sender);

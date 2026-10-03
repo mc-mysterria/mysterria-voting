@@ -226,7 +226,6 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
         return adminAudit;
     }
 
-    /** Loaded language files keyed by language code; fingerprinted around a reload for the audit row. */
     public Map<String, FileConfiguration> getTranslations() {
         return translationManager.translations;
     }

@@ -4,11 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Keeps repeat menu clicks from producing one audit row per click. Clicks that dispatch a
- * reward are always audited; other clicks are audited at most once per player per service
- * per window. Main thread only; in-memory, resets on restart.
- */
+/** Main thread only; in-memory, resets on restart. Reward clicks bypass the window via {@link #touch}. */
 public final class ClickAuditLimiter {
     private static final long WINDOW_MILLIS = 5L * 60L * 1000L;
     private static final int MAX_ENTRIES = 1_024;
@@ -20,7 +16,6 @@ public final class ClickAuditLimiter {
         }
     };
 
-    /** Returns true and records the click when the player/service pair is outside its window. */
     public boolean allow(UUID playerId, String service) {
         String key = playerId + ":" + service;
         long now = System.currentTimeMillis();

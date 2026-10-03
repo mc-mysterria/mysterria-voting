@@ -20,12 +20,10 @@ public final class AuditContext {
     private AuditContext() {
     }
 
-    /** UUID of a player or entity sender; null for console and other non-entity senders. */
     public static UUID actorId(CommandSender sender) {
         return sender instanceof Entity entity ? entity.getUniqueId() : null;
     }
 
-    /** Adds {@code actor_type}, and {@code actor_name} for non-entity senders such as the console. */
     public static void putActor(Map<String, Object> metadata, CommandSender sender) {
         if (sender instanceof Entity) {
             metadata.put("actor_type", "player");
@@ -35,7 +33,6 @@ public final class AuditContext {
         }
     }
 
-    /** Adds {@code world}, {@code x}, {@code y}, {@code z} for an entity sender. */
     public static void putLocation(Map<String, Object> metadata, CommandSender sender) {
         if (!(sender instanceof Entity entity)) {
             return;
@@ -49,7 +46,6 @@ public final class AuditContext {
         metadata.put("z", location.getBlockZ());
     }
 
-    /** Adds {@code item_material} plus {@code item_uuid} / {@code parent_item_uuid} when tagged. */
     public static void putItem(Map<String, Object> metadata, ItemStack item) {
         if (item == null) {
             return;

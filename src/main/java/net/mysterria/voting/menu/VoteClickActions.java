@@ -16,9 +16,8 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
- * Runs a vote-menu item's click actions. Console commands are the reward and run at most once
- * per player per service: the claim is persisted before they are dispatched. Player commands,
- * messages and titles run on every click, as before.
+ * Console commands are the reward and run at most once per player per service: the claim is
+ * persisted before they are dispatched. Player commands, messages and titles run on every click.
  */
 public final class VoteClickActions {
     private final VoteClaimStore claims;

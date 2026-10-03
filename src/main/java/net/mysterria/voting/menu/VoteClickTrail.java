@@ -14,9 +14,8 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
- * Audit rows for one vote-menu click. Every row shares the click's correlation id. When the
- * click is rate-limited ({@code audited == false}) only reward dispatch rows are written, and
- * those only occur on a successful claim, which is never rate-limited. Rows are built inside
+ * When the click is rate-limited ({@code audited == false}) only reward dispatch rows are written,
+ * and those only occur on a successful claim, which is never rate-limited. Rows are built inside
  * the emitter's guard, so a failure while collecting metadata never affects the click.
  */
 final class VoteClickTrail {
@@ -55,7 +54,6 @@ final class VoteClickTrail {
         });
     }
 
-    /** COMMITTED/FAILED as {@code voting.reward.claimed}; DENIED as {@code voting.reward.claim_denied}. */
     void emitClaim(AuditOutcome outcome, String reason, int commandCount) {
         if (!audited) return;
         send(() -> {

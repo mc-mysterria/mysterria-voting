@@ -3,7 +3,6 @@ package net.mysterria.voting.menu;
 import java.util.Locale;
 import java.util.Set;
 
-/** Classifies console reward command templates that hand out items, currency or permissions. */
 final class RewardCommandRisk {
     private static final Set<String> HIGH_RISK = Set.of(
             "give", "item", "i", "eco", "economy", "money", "pay", "xp", "experience", "lp", "luckperms");

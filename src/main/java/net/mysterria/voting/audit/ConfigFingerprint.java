@@ -14,22 +14,17 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-/**
- * Hashes of the live menu click actions and reminders, taken around a reload so the audit row
- * shows whether the reward commands changed. {@code menuHash} is null when menus are out of scope.
- */
+/** {@code menuHash} is null when menus are out of scope (reminder-only reload). */
 public record ConfigFingerprint(String menuHash, String consoleTemplates, int consoleTemplateCount,
                                 String remindersHash, int reminderCount) {
     private static final String[] LANGUAGES = {"en", "uk"};
 
-    /** Fingerprint of reminders only (for {@code /reminder reload}). */
     public static ConfigFingerprint reminders(ReminderManager reminders) {
         StringBuilder canonical = new StringBuilder();
         int count = appendReminders(canonical, reminders);
         return new ConfigFingerprint(null, null, 0, hash(canonical), count);
     }
 
-    /** Fingerprint of menu click actions and reminders (for {@code /voting reload}). */
     public static ConfigFingerprint full(Map<String, FileConfiguration> translations, ReminderManager reminders) {
         StringBuilder menus = new StringBuilder();
         TreeSet<String> templates = new TreeSet<>();
