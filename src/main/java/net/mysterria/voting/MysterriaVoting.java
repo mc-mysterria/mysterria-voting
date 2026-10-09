@@ -138,7 +138,7 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-
+        
         Inventory top = e.getView().getTopInventory();
         String menuLang = menuLanguageOf(top);
         if (menuLang == null) {
@@ -146,10 +146,9 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
             return;
         }
         e.setCancelled(true);
-        FileConfiguration langConfig = translationManager.translations.get(menuLang);
-        if (langConfig == null) return;
-        // Only slots of the vote menu itself run actions; the player's own inventory below it never does.
+        // Clicks in the player's own inventory never run actions.
         if (!top.equals(e.getClickedInventory())) return;
+        FileConfiguration langConfig = translationManager.translations.get(menuLang);
         ItemStack clickedItem = e.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
         String key = menuItemAt(langConfig, e.getSlot());
@@ -158,7 +157,6 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
         executeClickActions(p, langConfig, key, "menu-items." + key + ".click-actions." + clickType);
     }
 
-    /** Language of the cached vote menu backing this inventory (CraftInventory equality), or {@code null}. */
     private String menuLanguageOf(Inventory inventory) {
         for (Map.Entry<String, Map<String, Inventory>> entry : cachedMenus.entrySet()) {
             if (inventory.equals(entry.getValue().get("voting"))) return entry.getKey();
@@ -175,19 +173,11 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
         return null;
     }
 
-    /**
-     * Runs a menu item's click actions. Console commands are the reward and run at most once per
-     * player per service (the menu-items key): the claim is persisted before they are dispatched.
-     * Player commands, messages and titles run on every click.
-     */
     private void executeClickActions(Player p, FileConfiguration langConfig, String service, String path) {
         if (!langConfig.contains(path)) return;
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("target", p.getName());
-        List<String> consoleCmds = langConfig.contains(path + ".run-command.console")
-                ? langConfig.getStringList(path + ".run-command.console") : List.of();
-        boolean rewardClaimed = !consoleCmds.isEmpty() && claimReward(p, service);
-
+        
         if (langConfig.contains(path + ".run-command.player")) {
             List<String> playerCmds = langConfig.getStringList(path + ".run-command.player");
             for (String cmd : playerCmds) {
@@ -195,10 +185,14 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
                 p.performCommand(formattedCmd);
             }
         }
-        if (rewardClaimed) {
-            for (String cmd : consoleCmds) {
-                String formattedCmd = MessageUtils.formatPlain(cmd, placeholders);
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), formattedCmd);
+        if (langConfig.contains(path + ".run-command.console")) {
+            List<String> consoleCmds = langConfig.getStringList(path + ".run-command.console");
+            // The claim is saved before the reward is dispatched, so a reward is never paid twice.
+            if (!consoleCmds.isEmpty() && claims.claim(p.getUniqueId(), service, System.currentTimeMillis())) {
+                for (String cmd : consoleCmds) {
+                    String formattedCmd = MessageUtils.formatPlain(cmd, placeholders);
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), formattedCmd);
+                }
             }
         }
         if (langConfig.contains(path + ".message")) {
@@ -215,13 +209,6 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
             }
         }
         p.closeInventory();
-    }
-
-    /** True only when this click records the player's first claim of the service. */
-    private boolean claimReward(Player p, String service) {
-        if (claims.claimedAt(p.getUniqueId(), service) != null) return false;
-        if (!claims.isAvailable()) return false;
-        return claims.claim(p.getUniqueId(), service, System.currentTimeMillis());
     }
 
     @EventHandler
