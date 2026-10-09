@@ -66,13 +66,13 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
     }
 
     public void reload() {
+        retireMenus();
+        cachedMenus.clear();
         reloadConfig();
         translationManager.reload();
         if (reminderManager != null) {
             reminderManager.reload();
         }
-        retireMenus();
-        cachedMenus.clear();
         loadMenus();
     }
 
@@ -138,7 +138,7 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        
+
         Inventory top = e.getView().getTopInventory();
         String menuLang = menuLanguageOf(top);
         if (menuLang == null) {
@@ -177,7 +177,7 @@ public final class MysterriaVoting extends JavaPlugin implements Listener {
         if (!langConfig.contains(path)) return;
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("target", p.getName());
-        
+
         if (langConfig.contains(path + ".run-command.player")) {
             List<String> playerCmds = langConfig.getStringList(path + ".run-command.player");
             for (String cmd : playerCmds) {
