@@ -44,7 +44,13 @@ public class VotingCommand implements CommandExecutor, TabCompleter {
                     }
                     return true;
                 }
-                plugin.reload();
+                try {
+                    plugin.reload();
+                } catch (RuntimeException failure) {
+                    plugin.getAdminAudit().reloadFailed(s, "voting", failure);
+                    throw failure;
+                }
+                plugin.getAdminAudit().reloaded(s, "voting");
                 if (s instanceof Player p) {
                     s.sendMessage(MessageUtils.formatTranslatedMessage(p, "msg.reload-success", null));
                 } else {
@@ -61,7 +67,9 @@ public class VotingCommand implements CommandExecutor, TabCompleter {
                     }
                     return true;
                 }
+                int recipients = 0;
                 for (Player p : Bukkit.getOnlinePlayers()) {
+                    recipients++;
                     Component msgComponent = MessageUtils.formatTranslatedMessage(p, "msg.voting-message", null);
                     Component hoverComponent = MessageUtils.formatTranslatedMessage(p, "msg.hover-text", null);
                     Component finalComponent = msgComponent
@@ -69,6 +77,7 @@ public class VotingCommand implements CommandExecutor, TabCompleter {
                             .hoverEvent(HoverEvent.showText(hoverComponent));
                     p.sendMessage(finalComponent);
                 }
+                plugin.getAdminAudit().broadcast(s, recipients);
                 return true;
 
             default:

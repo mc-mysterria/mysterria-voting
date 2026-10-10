@@ -104,6 +104,7 @@ public class ReminderCommand implements CommandExecutor, TabCompleter {
         }
 
         plugin.getReminderManager().sendReminderById(reminderId);
+        plugin.getAdminAudit().reminderSent(sender, reminderId, null);
         sender.sendMessage(MessageUtils.formatMessage("<green>Reminder '" + reminderId + "' sent to all players!", null));
     }
 
@@ -134,6 +135,7 @@ public class ReminderCommand implements CommandExecutor, TabCompleter {
         }
 
         plugin.getReminderManager().sendReminderToPlayer(reminderId, target);
+        plugin.getAdminAudit().reminderSent(sender, reminderId, target);
         sender.sendMessage(MessageUtils.formatMessage("<green>Reminder '" + reminderId + "' sent to " + target.getName() + "!", null));
     }
 
@@ -143,7 +145,13 @@ public class ReminderCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        plugin.getReminderManager().reload();
+        try {
+            plugin.getReminderManager().reload();
+        } catch (RuntimeException failure) {
+            plugin.getAdminAudit().reloadFailed(sender, "reminders", failure);
+            throw failure;
+        }
+        plugin.getAdminAudit().reloaded(sender, "reminders");
         sender.sendMessage(MessageUtils.formatMessage("<green>Reminders reloaded successfully!", null));
     }
 
